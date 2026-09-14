@@ -1,0 +1,71 @@
+name: Release Please
+
+on:
+  workflow_call:
+    inputs:
+      release-type:
+        description: Release Please release strategy, for example simple, ruby, or terraform-module.
+        required: false
+        type: string
+        default: simple
+      config-file:
+        description: Path to the repository-specific Release Please configuration.
+        required: false
+        type: string
+        default: release-please-config.json
+      manifest-file:
+        description: Path to the repository-specific Release Please manifest.
+        required: false
+        type: string
+        default: .release-please-manifest.json
+      target-branch:
+        description: Branch receiving the release PR.
+        required: false
+        type: string
+        default: main
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: release-please-${{ github.repository }}-${{ inputs.target-branch }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Create release PR or GitHub release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Create shared Release Please configuration
+        if: ${{ inputs.config-file == 'release-please-config.json' }}
+        shell: bash
+        run: |
+          cat > "${{ inputs.config-file }}" <<'EOF'
+          {
+            "release-type": "${{ inputs.release-type }}",
+            "changelog-sections": [
+              { "type": "feat", "section": "🚀 Features" },
+              { "type": "fix", "section": "🐛 Fixes" },
+              { "type": "perf", "section": "⚡ Performance" },
+              { "type": "docs", "section": "📚 Documentation" },
+              { "type": "deps", "section": "📦 Dependencies" },
+              { "type": "refactor", "section": "🧹 Refactoring" },
+              { "type": "chore", "section": "🔧 Maintenance" }
+            ]
+          }
+          EOF
+
+      - name: Run Release Please
+        uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4
+        with:
+          release-type: ${{ inputs.release-type }}
+          config-file: ${{ inputs.config-file }}
+          manifest-file: ${{ inputs.manifest-file }}
+          target-branch: ${{ inputs.target-branch }}
