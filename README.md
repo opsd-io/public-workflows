@@ -22,4 +22,6 @@ jobs:
 
 The workflow runs Terraform formatting, initialization without a backend, validation, TFLint, and Checkov security checks.
 
+This repository also runs `actionlint` against its own GitHub Actions workflows to catch invalid syntax, expressions, action inputs, and reusable workflow interfaces.
+
 For production use, prefer a versioned tag or commit SHA instead of `@main`.
