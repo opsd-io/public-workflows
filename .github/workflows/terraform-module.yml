@@ -1,0 +1,65 @@
+name: Terraform module checks
+
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        description: Directory containing the Terraform module.
+        required: false
+        type: string
+        default: .
+      terraform-version:
+        description: Terraform version to use for validation.
+        required: false
+        type: string
+        default: 1.15.7
+
+permissions:
+  contents: read
+
+env:
+  TF_IN_AUTOMATION: true
+
+jobs:
+  checks:
+    name: Terraform checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ inputs.terraform-version }}
+
+      - name: Set up TFLint
+        uses: terraform-linters/setup-tflint@b480b8fcdaa6f2c577f8e4fa799e89e756bb7c93 # v6.2.2
+
+      - name: Terraform Init
+        run: terraform init -backend=false -input=false
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Initialize TFLint plugins
+        run: tflint --init
+
+      - name: TFLint
+        run: tflint --recursive
+
+      - name: Checkov
+        uses: bridgecrewio/checkov-action@a8664e3a0549367977f0cda990a34311835c87c0 # v12
+        with:
+          directory: ${{ inputs.working-directory }}
+          framework: terraform
+          quiet: true
