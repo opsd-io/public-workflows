@@ -3,21 +3,11 @@ name: OPSd public infrastructure plan
 on:
   workflow_call:
     inputs:
-      blueprint:
-        description: OPSd blueprint to generate.
+      compatibility-file:
+        description: Path to the CLI compatibility and scenario matrix file.
         required: false
         type: string
-        default: kubernetes-foundation
-      variant:
-        description: Blueprint variant to generate.
-        required: false
-        type: string
-        default: kubernetes
-      modules-ref:
-        description: DigitalOcean modules release to resolve.
-        required: false
-        type: string
-        default: v1.0.0
+        default: ci/public-compatibility.yaml
       terraform-version:
         description: Terraform version to use for the plan.
         required: false
@@ -32,21 +22,13 @@ on:
 permissions:
   contents: read
 
-env:
-  TF_IN_AUTOMATION: true
-  OPSD_MODULES_DIGITALOCEAN_REF: ${{ inputs.modules-ref }}
-
 jobs:
-  plan:
-    name: ${{ matrix.iac-tool }} plan
+  matrix:
+    name: Generate compatibility matrix
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      OPSD_PUBLIC_PLAN_ROOT: ${{ runner.temp }}/opsd-public-plan
-    strategy:
-      fail-fast: false
-      matrix:
-        iac-tool: [terraform, tofu]
+    timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
       - name: Check out CLI
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30af803 # v6
@@ -57,50 +39,76 @@ jobs:
           ruby-version: .ruby-version
           bundler: none
 
+      - name: Build matrix
+        id: matrix
+        env:
+          COMPATIBILITY_FILE: ${{ inputs.compatibility-file }}
+        run: |
+          ruby -rjson -ryaml <<'RUBY' >> "${GITHUB_OUTPUT}"
+          config = YAML.load_file(ENV.fetch("COMPATIBILITY_FILE"))
+          provider = config.fetch("provider")
+          module_refs = config.fetch("modules").fetch(provider).fetch("refs")
+          cli_refs = config.fetch("cli_refs", ["current"]).map do |ref|
+            ref == "current" ? ENV.fetch("GITHUB_SHA") : ref
+          end
+          scenarios = config.fetch("scenarios")
+          tools = config.fetch("iac_tools", %w[terraform tofu])
+
+          entries = cli_refs.flat_map do |cli_ref|
+            module_refs.flat_map do |modules_ref|
+              scenarios.flat_map do |scenario|
+                tools.map do |iac_tool|
+                  {
+                    "cli_ref" => cli_ref,
+                    "modules_ref" => modules_ref,
+                    "scenario" => scenario.fetch("id"),
+                    "iac_tool" => iac_tool
+                  }
+                end
+              end
+            end
+          end
+
+          abort "Compatibility matrix is empty" if entries.empty?
+          puts "matrix=#{JSON.generate({"include" => entries})}"
+          RUBY
+
+  plan:
+    name: ${{ matrix.scenario }} / ${{ matrix.iac_tool }}
+    needs: matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.matrix.outputs.matrix) }}
+    steps:
+      - name: Check out CLI
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30af803 # v6
+        with:
+          ref: ${{ matrix.cli_ref }}
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@51c0d5922252eab2cb7349f2142160df023fb656 # v1.95.0
+        with:
+          ruby-version: .ruby-version
+          bundler: none
+
       - name: Set up Terraform
-        if: matrix.iac-tool == 'terraform'
+        if: matrix.iac_tool == 'terraform'
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: ${{ inputs.terraform-version }}
 
       - name: Set up OpenTofu
-        if: matrix.iac-tool == 'tofu'
+        if: matrix.iac_tool == 'tofu'
         uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2
         with:
           tofu_version: ${{ inputs.opentofu-version }}
 
-      - name: Generate and validate manifest
-        shell: bash
-        run: |
-          set -euo pipefail
-          work_root="${OPSD_PUBLIC_PLAN_ROOT}"
-          mkdir -p "${work_root}"
-          export OPSD_WORKSPACE_ROOT="${work_root}/workspace"
-          export OPSD_PROFILE=ci
-
-          printf 'digitalocean\n\nfra1\n' | bin/opsd config profile create ci
-          bin/opsd config profile use ci
-          bin/opsd init blueprint "${{ inputs.blueprint }}" "${work_root}/environment.yaml" --variant "${{ inputs.variant }}"
-          bin/opsd validate manifest "${work_root}/environment.yaml"
-          bin/opsd render manifest "${work_root}/environment.yaml" --output "${work_root}/rendered"
-
-      - name: Terraform format check
-        working-directory: ${{ env.OPSD_PUBLIC_PLAN_ROOT }}/rendered
-        run: ${{ matrix.iac-tool }} fmt -check -recursive
-
-      - name: Terraform init
-        working-directory: ${{ env.OPSD_PUBLIC_PLAN_ROOT }}/rendered
-        run: ${{ matrix.iac-tool }} init -backend=false -input=false
-
-      - name: Terraform validate
-        working-directory: ${{ env.OPSD_PUBLIC_PLAN_ROOT }}/rendered
-        run: ${{ matrix.iac-tool }} validate
-
-      - name: Terraform plan
-        working-directory: ${{ env.OPSD_PUBLIC_PLAN_ROOT }}/rendered
-        run: >-
-          ${{ matrix.iac-tool }} plan
-          -refresh=false
-          -input=false
-          -lock=false
-          -var=digitalocean_token=public-plan-placeholder
+      - name: Run CLI scenario
+        env:
+          OPSD_PUBLIC_SCENARIO: ${{ matrix.scenario }}
+          OPSD_PUBLIC_MODULES_REF: ${{ matrix.modules_ref }}
+          OPSD_PUBLIC_IAC_TOOL: ${{ matrix.iac_tool }}
+          OPSD_PUBLIC_COMPATIBILITY_FILE: ${{ inputs.compatibility-file }}
+        run: ruby scripts/ci/run_public_scenario.rb
