@@ -8,6 +8,16 @@ on:
         required: false
         type: string
         default: scripts/release/build_portable_bundle.sh
+      checkout-ref:
+        description: Git ref to build. Defaults to the workflow ref.
+        required: false
+        type: string
+        default: ''
+      release-tag:
+        description: GitHub Release tag to receive the assets. Defaults to the workflow ref name.
+        required: false
+        type: string
+        default: ''
       linux-runner:
         description: JSON array of labels for the Linux runner.
         required: false
@@ -37,6 +47,8 @@ jobs:
     steps:
       - name: Check out tagged source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30af803 # v6
+        with:
+          ref: ${{ inputs.checkout-ref || github.ref }}
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
@@ -53,17 +65,19 @@ jobs:
           sha256sum "$bundle" > "dist/${bundle_name}.sha256"
       - name: Wait for GitHub Release
         shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.release-tag || github.ref_name }}
         run: |
           attempt=1
-          while ! gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 && [ "$attempt" -le 12 ]; do
+          while ! gh release view "${RELEASE_TAG}" >/dev/null 2>&1 && [ "$attempt" -le 12 ]; do
             attempt=$((attempt + 1))
             sleep 5
           done
-          gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 && exit 0
-          echo "GitHub Release ${GITHUB_REF_NAME} was not found" >&2
+          gh release view "${RELEASE_TAG}" >/dev/null 2>&1 && exit 0
+          echo "GitHub Release ${RELEASE_TAG} was not found" >&2
           exit 1
       - name: Upload release assets
-        run: gh release upload "${GITHUB_REF_NAME}" dist/*.tar.gz dist/*.sha256 --clobber
+        run: gh release upload "${{ inputs.release-tag || github.ref_name }}" dist/*.tar.gz dist/*.sha256 --clobber
 
   macos:
     name: macOS ARM64 bundle
@@ -72,6 +86,8 @@ jobs:
     steps:
       - name: Check out tagged source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30af803 # v6
+        with:
+          ref: ${{ inputs.checkout-ref || github.ref }}
       - name: Verify runner Ruby
         shell: bash
         env:
@@ -103,14 +119,16 @@ jobs:
           shasum -a 256 "$bundle" > "dist/${bundle_name}.sha256"
       - name: Wait for GitHub Release
         shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.release-tag || github.ref_name }}
         run: |
           attempt=1
-          while ! gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 && [ "$attempt" -le 12 ]; do
+          while ! gh release view "${RELEASE_TAG}" >/dev/null 2>&1 && [ "$attempt" -le 12 ]; do
             attempt=$((attempt + 1))
             sleep 5
           done
-          gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 && exit 0
-          echo "GitHub Release ${GITHUB_REF_NAME} was not found" >&2
+          gh release view "${RELEASE_TAG}" >/dev/null 2>&1 && exit 0
+          echo "GitHub Release ${RELEASE_TAG} was not found" >&2
           exit 1
       - name: Upload release assets
-        run: gh release upload "${GITHUB_REF_NAME}" dist/*.tar.gz dist/*.sha256 --clobber
+        run: gh release upload "${{ inputs.release-tag || github.ref_name }}" dist/*.tar.gz dist/*.sha256 --clobber

@@ -23,6 +23,11 @@ on:
         required: false
         type: string
         default: main
+      publish-bundle:
+        description: Build and publish CLI bundles after a release is created.
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -38,6 +43,9 @@ jobs:
     name: Create release PR or GitHub release
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
 
     steps:
       - name: Check out repository
@@ -63,9 +71,18 @@ jobs:
           EOF
 
       - name: Run Release Please
+        id: release
         uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4
         with:
           release-type: ${{ inputs.release-type }}
           config-file: ${{ inputs.config-file }}
           manifest-file: ${{ inputs.manifest-file }}
           target-branch: ${{ inputs.target-branch }}
+
+  bundle:
+    if: ${{ inputs.publish-bundle && needs.release.outputs.release_created == 'true' }}
+    needs: release
+    uses: ./.github/workflows/cli-release-bundle.yml
+    with:
+      checkout-ref: ${{ needs.release.outputs.tag_name }}
+      release-tag: ${{ needs.release.outputs.tag_name }}
