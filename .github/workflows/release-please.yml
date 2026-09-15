@@ -101,6 +101,42 @@ jobs:
           manifest-file: ${{ inputs.manifest-file }}
           target-branch: ${{ inputs.target-branch }}
 
+      - name: Update source version file
+        if: ${{ steps.release.outputs.pr != '' && inputs.version-file != '' }}
+        env:
+          RELEASE_PR: ${{ steps.release.outputs.pr }}
+          VERSION_FILE: ${{ inputs.version-file }}
+        run: |
+          set -euo pipefail
+
+          release_branch="$(jq -r '.headBranchName // empty' <<<"${RELEASE_PR}")"
+          release_version="$(jq -r '.version // empty' <<<"${RELEASE_PR}")"
+
+          if [[ -z "${release_branch}" || -z "${release_version}" ]]; then
+            echo "Release Please did not return a release PR branch and version."
+            exit 1
+          fi
+
+          git fetch origin "${release_branch}"
+          git checkout -B "${release_branch}" "origin/${release_branch}"
+
+          ruby - "${VERSION_FILE}" "${release_version}" <<'RUBY'
+          path, version = ARGV
+          content = File.read(path)
+          updated = content.sub(
+            /(VERSION\s*=\s*["'])\d+\.\d+\.\d+(?:-[\w.]+)?(?:\+[\w.-]+)?(["'])/,
+            "\\1#{version}\\2"
+          )
+          abort "Could not find a Ruby VERSION assignment in #{path}" if updated == content
+          File.write(path, updated)
+          RUBY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "${VERSION_FILE}"
+          git commit -m "chore: update source version to ${release_version}"
+          git push origin "HEAD:${release_branch}"
+
   bundle:
     if: ${{ inputs.publish-bundle && needs.release.outputs.release_created == 'true' }}
     needs: release
