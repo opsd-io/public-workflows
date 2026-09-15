@@ -8,6 +8,11 @@ on:
         required: false
         type: string
         default: simple
+      version-file:
+        description: Version file used by release strategies that update source versions.
+        required: false
+        type: string
+        default: ''
       config-file:
         description: Path to the repository-specific Release Please configuration.
         required: false
@@ -81,6 +86,7 @@ jobs:
           config-file: ${{ inputs.config-file }}
           manifest-file: ${{ inputs.manifest-file }}
           target-branch: ${{ inputs.target-branch }}
+          version-file: ${{ inputs.version-file }}
 
   bundle:
     if: ${{ inputs.publish-bundle && needs.release.outputs.release_created == 'true' }}
