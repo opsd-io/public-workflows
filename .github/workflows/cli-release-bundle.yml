@@ -67,7 +67,7 @@ jobs:
           echo "OPSD_RUBY_BIN=${ruby_bin}" >> "${GITHUB_ENV}"
       - name: Run unit tests
         run: |
-          "${OPSD_RUBY_BIN}" -Ilib:test -e 'Dir["test/*_test.rb"].sort.each { |f| load f }'
+          RUBY_BIN="${OPSD_RUBY_BIN}" "${OPSD_RUBY_BIN}" -Ilib:test -e 'Dir["test/*_test.rb"].sort.each { |f| load f }'
       - name: Build bundle
         run: ${{ inputs.build-script }}
       - name: Generate checksum
@@ -119,7 +119,7 @@ jobs:
         env:
           OPSD_MACOS_RUBY_BIN: ${{ vars.OPSD_MACOS_RUBY_BIN }}
         run: |
-          "${OPSD_MACOS_RUBY_BIN}" -Ilib:test -e 'Dir["test/*_test.rb"].sort.each { |f| load f }'
+          RUBY_BIN="${OPSD_MACOS_RUBY_BIN}" "${OPSD_MACOS_RUBY_BIN}" -Ilib:test -e 'Dir["test/*_test.rb"].sort.each { |f| load f }'
       - name: Build bundle
         env:
           OPSD_RUBY_BIN: ${{ vars.OPSD_MACOS_RUBY_BIN }}
