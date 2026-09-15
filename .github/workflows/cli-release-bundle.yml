@@ -60,6 +60,14 @@ jobs:
           }
           eval "$(rbenv init - bash)"
           ruby_version="$(tr -d '[:space:]' < .ruby-version)"
+          if ! rbenv install --list | grep -Fxq "${ruby_version}"; then
+            ruby_build_plugin="${RBENV_ROOT}/plugins/ruby-build"
+            test -d "${ruby_build_plugin}" || {
+              echo "ruby-build plugin is missing under ${ruby_build_plugin}" >&2
+              exit 1
+            }
+            git -C "${ruby_build_plugin}" pull --ff-only
+          fi
           rbenv install -s "${ruby_version}"
           rbenv shell "${ruby_version}"
           ruby_bin="$(rbenv which ruby)"
