@@ -114,6 +114,7 @@ jobs:
           config-file: ${{ inputs.config-file }}
           manifest-file: ${{ inputs.manifest-file }}
           target-branch: ${{ inputs.target-branch }}
+          release-as: ${{ inputs.release-as }}
 
       - name: Update source version file
         if: ${{ steps.release.outputs.pr != '' && inputs.version-file != '' }}
