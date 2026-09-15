@@ -88,17 +88,20 @@ jobs:
         shell: bash
         env:
           RELEASE_TAG: ${{ inputs.release-tag || github.ref_name }}
+          GH_REPO: ${{ github.repository }}
         run: |
           attempt=1
-          while ! gh release view "${RELEASE_TAG}" >/dev/null 2>&1 && [ "$attempt" -le 12 ]; do
+          while ! gh release view "${RELEASE_TAG}" --repo "${GH_REPO}" >/dev/null 2>&1 && [ "$attempt" -le 12 ]; do
             attempt=$((attempt + 1))
             sleep 5
           done
-          gh release view "${RELEASE_TAG}" >/dev/null 2>&1 && exit 0
+          gh release view "${RELEASE_TAG}" --repo "${GH_REPO}" >/dev/null 2>&1 && exit 0
           echo "GitHub Release ${RELEASE_TAG} was not found" >&2
           exit 1
       - name: Upload release assets
-        run: gh release upload "${{ inputs.release-tag || github.ref_name }}" dist/*.tar.gz dist/*.sha256 --clobber
+        env:
+          GH_REPO: ${{ github.repository }}
+        run: gh release upload "${{ inputs.release-tag || github.ref_name }}" --repo "${GH_REPO}" dist/*.tar.gz dist/*.sha256 --clobber
 
   macos:
     name: macOS ARM64 bundle
@@ -140,14 +143,17 @@ jobs:
         shell: bash
         env:
           RELEASE_TAG: ${{ inputs.release-tag || github.ref_name }}
+          GH_REPO: ${{ github.repository }}
         run: |
           attempt=1
-          while ! gh release view "${RELEASE_TAG}" >/dev/null 2>&1 && [ "$attempt" -le 12 ]; do
+          while ! gh release view "${RELEASE_TAG}" --repo "${GH_REPO}" >/dev/null 2>&1 && [ "$attempt" -le 12 ]; do
             attempt=$((attempt + 1))
             sleep 5
           done
-          gh release view "${RELEASE_TAG}" >/dev/null 2>&1 && exit 0
+          gh release view "${RELEASE_TAG}" --repo "${GH_REPO}" >/dev/null 2>&1 && exit 0
           echo "GitHub Release ${RELEASE_TAG} was not found" >&2
           exit 1
       - name: Upload release assets
-        run: gh release upload "${{ inputs.release-tag || github.ref_name }}" dist/*.tar.gz dist/*.sha256 --clobber
+        env:
+          GH_REPO: ${{ github.repository }}
+        run: gh release upload "${{ inputs.release-tag || github.ref_name }}" --repo "${GH_REPO}" dist/*.tar.gz dist/*.sha256 --clobber
