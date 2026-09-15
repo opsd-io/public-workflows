@@ -50,3 +50,30 @@ jobs:
 ```
 
 The workflow creates or updates a release PR and, after that PR is merged, creates the version tag and GitHub release. It applies a shared release-notes layout with `🚀 Features` first, followed by fixes, performance, documentation, dependencies, refactoring, and maintenance. Repositories should use Conventional Commits, for example `feat: add ...` or `fix: correct ...`. A repository can still provide its own `release-please-config.json` when it needs a deliberate exception.
+
+## CLI release bundles
+
+Use the reusable CLI release workflow from a repository workflow triggered by a
+version tag:
+
+```yaml
+name: Release bundle
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  bundle:
+    uses: opsd-io/public-workflows/.github/workflows/cli-release-bundle.yml@main
+```
+
+The workflow runs unit tests and builds Linux x64 and macOS ARM64 portable
+bundles in parallel. It uploads each bundle and its SHA-256 checksum to the
+GitHub Release for the pushed tag. The macOS runner must provide the
+`OPSD_MACOS_RUBY_BIN` repository or organization variable pointing to a
+runner-managed Ruby version matching `.ruby-version`.
