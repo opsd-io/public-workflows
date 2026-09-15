@@ -49,16 +49,24 @@ jobs:
         uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
         with:
           ref: ${{ inputs.checkout-ref || github.ref }}
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+      - name: Verify runner Ruby
+        shell: bash
         env:
-          RUNNER_TOOL_CACHE: ${{ runner.temp }}/toolcache
-          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/toolcache
-        with:
-          ruby-version: .ruby-version
+          OPSD_LINUX_RUBY_BIN: ${{ vars.OPSD_LINUX_RUBY_BIN || 'ruby' }}
+        run: |
+          command -v "${OPSD_LINUX_RUBY_BIN}" >/dev/null || {
+            echo "Ruby executable was not found: ${OPSD_LINUX_RUBY_BIN}" >&2
+            exit 1
+          }
+          test "$(${OPSD_LINUX_RUBY_BIN} --disable-gems -e 'print RUBY_VERSION')" = "$(tr -d '[:space:]' < .ruby-version)"
       - name: Run unit tests
-        run: sh scripts/ci/run_unit_cli_tests.sh
+        env:
+          OPSD_RUBY_BIN: ${{ vars.OPSD_LINUX_RUBY_BIN || 'ruby' }}
+        run: |
+          "${OPSD_RUBY_BIN}" -Ilib:test -e 'Dir["test/*_test.rb"].sort.each { |f| load f }'
       - name: Build bundle
+        env:
+          OPSD_RUBY_BIN: ${{ vars.OPSD_LINUX_RUBY_BIN || 'ruby' }}
         run: ${{ inputs.build-script }}
       - name: Generate checksum
         shell: bash
