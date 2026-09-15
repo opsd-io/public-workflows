@@ -63,6 +63,7 @@ jobs:
           cat > "${{ inputs.config-file }}" <<'EOF'
           {
             "release-type": "${{ inputs.release-type }}",
+            "version-file": "${{ inputs.version-file }}",
             "exclude-paths": [
               ".github/workflows"
             ],
