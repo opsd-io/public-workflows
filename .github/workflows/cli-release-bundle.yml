@@ -60,6 +60,14 @@ jobs:
           }
           eval "$(rbenv init - bash)"
           ruby_version="$(tr -d '[:space:]' < .ruby-version)"
+          if ! rbenv install --list | grep -Fxq "${ruby_version}"; then
+            ruby_build_plugin="${RBENV_ROOT}/plugins/ruby-build"
+            test -d "${ruby_build_plugin}" || {
+              echo "ruby-build plugin is missing under ${ruby_build_plugin}" >&2
+              exit 1
+            }
+            git -C "${ruby_build_plugin}" pull --ff-only
+          fi
           rbenv install -s "${ruby_version}"
           rbenv shell "${ruby_version}"
           ruby_bin="$(rbenv which ruby)"
@@ -112,6 +120,16 @@ jobs:
           }
           eval "$(rbenv init - bash)"
           ruby_version="$(tr -d '[:space:]' < .ruby-version)"
+          if ! rbenv versions --bare | grep -Fxq "${ruby_version}" && command -v brew >/dev/null; then
+            brew_formula="ruby@${ruby_version%.*}"
+            if brew_prefix="$(brew --prefix "${brew_formula}" 2>/dev/null)"; then
+              brew_ruby="${brew_prefix}/bin/ruby"
+              if test -x "${brew_ruby}" && test "$(${brew_ruby} --disable-gems -e 'print RUBY_VERSION')" = "${ruby_version}"; then
+                mkdir -p "${RBENV_ROOT}/versions"
+                ln -sfn "${brew_prefix}" "${RBENV_ROOT}/versions/${ruby_version}"
+              fi
+            fi
+          fi
           rbenv install -s "${ruby_version}"
           rbenv shell "${ruby_version}"
           ruby_bin="$(rbenv which ruby)"
