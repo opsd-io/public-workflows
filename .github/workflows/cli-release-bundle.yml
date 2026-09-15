@@ -47,14 +47,19 @@ jobs:
         run: ${{ inputs.build-script }}
       - name: Generate checksum
         shell: bash
-        run: sha256sum dist/*.tar.gz > dist/$(basename dist/*.tar.gz).sha256
+        run: |
+          bundle=$(find dist -maxdepth 1 -name '*.tar.gz' -print -quit)
+          bundle_name=${bundle##*/}
+          sha256sum "$bundle" > "dist/${bundle_name}.sha256"
       - name: Wait for GitHub Release
         shell: bash
         run: |
-          for attempt in {1..12}; do
-            gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 && exit 0
+          attempt=1
+          while ! gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 && [ "$attempt" -le 12 ]; do
+            attempt=$((attempt + 1))
             sleep 5
           done
+          gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 && exit 0
           echo "GitHub Release ${GITHUB_REF_NAME} was not found" >&2
           exit 1
       - name: Upload release assets
@@ -92,14 +97,19 @@ jobs:
         run: ${{ inputs.build-script }}
       - name: Generate checksum
         shell: bash
-        run: shasum -a 256 dist/*.tar.gz > dist/$(basename dist/*.tar.gz).sha256
+        run: |
+          bundle=$(find dist -maxdepth 1 -name '*.tar.gz' -print -quit)
+          bundle_name=${bundle##*/}
+          shasum -a 256 "$bundle" > "dist/${bundle_name}.sha256"
       - name: Wait for GitHub Release
         shell: bash
         run: |
-          for attempt in {1..12}; do
-            gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 && exit 0
+          attempt=1
+          while ! gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 && [ "$attempt" -le 12 ]; do
+            attempt=$((attempt + 1))
             sleep 5
           done
+          gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 && exit 0
           echo "GitHub Release ${GITHUB_REF_NAME} was not found" >&2
           exit 1
       - name: Upload release assets
