@@ -18,6 +18,11 @@ on:
         required: false
         type: string
         default: ''
+      run-tests:
+        description: Run the repository unit tests before building the bundle.
+        required: false
+        type: boolean
+        default: true
       linux-runner:
         description: JSON array of labels for the Linux runner.
         required: false
@@ -60,6 +65,7 @@ jobs:
           }
           test "$(${OPSD_LINUX_RUBY_BIN} --disable-gems -e 'print RUBY_VERSION')" = "$(tr -d '[:space:]' < .ruby-version)"
       - name: Run unit tests
+        if: ${{ inputs.run-tests }}
         env:
           OPSD_RUBY_BIN: ${{ vars.OPSD_LINUX_RUBY_BIN || 'ruby' }}
         run: |
@@ -114,6 +120,7 @@ jobs:
           }
           test "$(${OPSD_MACOS_RUBY_BIN} --disable-gems -e 'print RUBY_VERSION')" = "$(tr -d '[:space:]' < .ruby-version)"
       - name: Run unit tests
+        if: ${{ inputs.run-tests }}
         env:
           OPSD_MACOS_RUBY_BIN: ${{ vars.OPSD_MACOS_RUBY_BIN }}
         run: |
