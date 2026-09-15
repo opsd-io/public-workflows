@@ -63,6 +63,7 @@ jobs:
           cat > "${{ inputs.config-file }}" <<'EOF'
           {
             "release-type": "${{ inputs.release-type }}",
+            "version-file": "${{ inputs.version-file }}",
             "exclude-paths": [
               ".github/workflows"
             ],
@@ -86,7 +87,6 @@ jobs:
           config-file: ${{ inputs.config-file }}
           manifest-file: ${{ inputs.manifest-file }}
           target-branch: ${{ inputs.target-branch }}
-          version-file: ${{ inputs.version-file }}
 
   bundle:
     if: ${{ inputs.publish-bundle && needs.release.outputs.release_created == 'true' }}
