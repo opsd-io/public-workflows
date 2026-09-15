@@ -13,6 +13,11 @@ on:
         required: false
         type: string
         default: ''
+      component:
+        description: Component name used by release strategies with component-based defaults.
+        required: false
+        type: string
+        default: ''
       config-file:
         description: Path to the repository-specific Release Please configuration.
         required: false
@@ -64,6 +69,7 @@ jobs:
           {
             "release-type": "${{ inputs.release-type }}",
             "version-file": "${{ inputs.version-file }}",
+            "component": "${{ inputs.component }}",
             "exclude-paths": [
               ".github/workflows"
             ],
@@ -79,7 +85,8 @@ jobs:
             "packages": {
               ".": {
                 "release-type": "${{ inputs.release-type }}",
-                "version-file": "${{ inputs.version-file }}"
+                "version-file": "${{ inputs.version-file }}",
+                "component": "${{ inputs.component }}"
               }
             }
           }
