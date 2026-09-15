@@ -96,6 +96,18 @@ jobs:
 
 The workflow creates or updates a release PR and, after that PR is merged, creates the version tag and GitHub release. It applies a shared release-notes layout with `🚀 Features` first, followed by fixes, performance, documentation, dependencies, refactoring, and maintenance. Repositories should use Conventional Commits, for example `feat: add ...` or `fix: correct ...`. A repository can still provide its own `release-please-config.json` when it needs a deliberate exception.
 
+For repositories whose source contains a release version, pass the matching
+strategy and version file. For example, a Ruby application can use:
+
+```yaml
+with:
+  release-type: ruby
+  version-file: lib/opsd/version.rb
+```
+
+Release Please will update that file in the release PR so the source version,
+tag, changelog, and generated artifacts remain aligned.
+
 ## CLI release bundles
 
 Use the reusable CLI release workflow from a repository workflow triggered by a
