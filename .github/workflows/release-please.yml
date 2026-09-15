@@ -18,6 +18,11 @@ on:
         required: false
         type: string
         default: ''
+      initial-version:
+        description: Initial release version when no previous release exists.
+        required: false
+        type: string
+        default: ''
       config-file:
         description: Path to the repository-specific Release Please configuration.
         required: false
@@ -70,6 +75,7 @@ jobs:
             "release-type": "${{ inputs.release-type }}",
             "version-file": "${{ inputs.version-file }}",
             "component": "${{ inputs.component }}",
+            "initial-version": "${{ inputs.initial-version }}",
             "exclude-paths": [
               ".github/workflows"
             ],
@@ -86,7 +92,8 @@ jobs:
               ".": {
                 "release-type": "${{ inputs.release-type }}",
                 "version-file": "${{ inputs.version-file }}",
-                "component": "${{ inputs.component }}"
+                "component": "${{ inputs.component }}",
+                "initial-version": "${{ inputs.initial-version }}"
               }
             }
           }
