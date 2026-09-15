@@ -20,7 +20,7 @@ jobs:
       working-directory: .
 ```
 
-The workflow runs Terraform formatting, initialization without a backend, validation, TFLint, and Checkov security checks.
+The workflow runs the module checks in parallel with Terraform and OpenTofu: formatting, initialization without a backend, validation, TFLint, and Checkov security checks. Terraform and OpenTofu versions can be overridden through workflow inputs.
 
 This repository also runs `actionlint` against its own GitHub Actions workflows to catch invalid syntax, expressions, action inputs, and reusable workflow interfaces.
 
