@@ -23,6 +23,11 @@ on:
         required: false
         type: string
         default: ''
+      release-as:
+        description: Explicit version to use for a release when required.
+        required: false
+        type: string
+        default: ''
       config-file:
         description: Path to the repository-specific Release Please configuration.
         required: false
@@ -76,6 +81,7 @@ jobs:
             "version-file": "${{ inputs.version-file }}",
             "component": "${{ inputs.component }}",
             "initial-version": "${{ inputs.initial-version }}",
+            "release-as": "${{ inputs.release-as }}",
             "exclude-paths": [
               ".github/workflows"
             ],
@@ -93,7 +99,8 @@ jobs:
                 "release-type": "${{ inputs.release-type }}",
                 "version-file": "${{ inputs.version-file }}",
                 "component": "${{ inputs.component }}",
-                "initial-version": "${{ inputs.initial-version }}"
+                "initial-version": "${{ inputs.initial-version }}",
+                "release-as": "${{ inputs.release-as }}"
               }
             }
           }
