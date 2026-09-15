@@ -53,7 +53,7 @@ jobs:
         shell: bash
         run: |
           export RBENV_ROOT="${RBENV_ROOT:-${HOME}/.rbenv}"
-          export PATH="${RBENV_ROOT}/bin:${PATH}"
+          export PATH="${RBENV_ROOT}/plugins/ruby-build/bin:${RBENV_ROOT}/bin:${PATH}"
           command -v rbenv >/dev/null || {
             echo "rbenv is required on the Linux self-hosted runner" >&2
             exit 1
@@ -113,7 +113,7 @@ jobs:
         shell: bash
         run: |
           export RBENV_ROOT="${RBENV_ROOT:-${HOME}/.rbenv}"
-          export PATH="${RBENV_ROOT}/bin:${PATH}"
+          export PATH="${RBENV_ROOT}/plugins/ruby-build/bin:${RBENV_ROOT}/bin:${PATH}"
           command -v rbenv >/dev/null || {
             echo "rbenv is required on the macOS self-hosted runner" >&2
             exit 1
