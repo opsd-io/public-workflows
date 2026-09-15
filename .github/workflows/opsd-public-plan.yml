@@ -59,6 +59,7 @@ jobs:
               scenarios.flat_map do |scenario|
                 tools.map do |iac_tool|
                   {
+                    "provider" => provider,
                     "cli_ref" => cli_ref,
                     "modules_ref" => modules_ref,
                     "scenario" => scenario.fetch("id"),
@@ -74,7 +75,7 @@ jobs:
           RUBY
 
   plan:
-    name: ${{ matrix.scenario }} / ${{ matrix.iac_tool }}
+    name: ${{ matrix.provider }} / ${{ matrix.scenario }} / ${{ matrix.iac_tool }}
     needs: matrix
     runs-on: ubuntu-latest
     timeout-minutes: 25
