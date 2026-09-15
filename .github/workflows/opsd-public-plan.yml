@@ -44,35 +44,7 @@ jobs:
         env:
           COMPATIBILITY_FILE: ${{ inputs.compatibility-file }}
         run: |
-          ruby -rjson -ryaml <<'RUBY' >> "${GITHUB_OUTPUT}"
-          config = YAML.load_file(ENV.fetch("COMPATIBILITY_FILE"))
-          provider = config.fetch("provider")
-          module_refs = config.fetch("modules").fetch(provider).fetch("refs")
-          cli_refs = config.fetch("cli_refs", ["current"]).map do |ref|
-            ref == "current" ? ENV.fetch("GITHUB_SHA") : ref
-          end
-          scenarios = config.fetch("scenarios")
-          tools = config.fetch("iac_tools", %w[terraform tofu])
-
-          entries = cli_refs.flat_map do |cli_ref|
-            module_refs.flat_map do |modules_ref|
-              scenarios.flat_map do |scenario|
-                tools.map do |iac_tool|
-                  {
-                    "provider" => provider,
-                    "cli_ref" => cli_ref,
-                    "modules_ref" => modules_ref,
-                    "scenario" => scenario.fetch("id"),
-                    "iac_tool" => iac_tool
-                  }
-                end
-              end
-            end
-          end
-
-          abort "Compatibility matrix is empty" if entries.empty?
-          puts "matrix=#{JSON.generate({"include" => entries})}"
-          RUBY
+          ruby scripts/ci/generate_public_matrix.rb >> "${GITHUB_OUTPUT}"
 
   plan:
     name: ${{ matrix.provider }} / ${{ matrix.scenario }} / ${{ matrix.iac_tool }}
