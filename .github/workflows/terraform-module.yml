@@ -13,6 +13,11 @@ on:
         required: false
         type: string
         default: 1.15.7
+      opentofu-version:
+        description: OpenTofu version to use for validation.
+        required: false
+        type: string
+        default: 1.12.6
 
 permissions:
   contents: read
@@ -22,9 +27,14 @@ env:
 
 jobs:
   checks:
-    name: Terraform checks
+    name: ${{ matrix.iac-tool }} checks
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        iac-tool: [terraform, tofu]
 
     defaults:
       run:
@@ -35,21 +45,28 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Set up Terraform
+        if: matrix.iac-tool == 'terraform'
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: ${{ inputs.terraform-version }}
+
+      - name: Set up OpenTofu
+        if: matrix.iac-tool == 'tofu'
+        uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2
+        with:
+          tofu_version: ${{ inputs.opentofu-version }}
 
       - name: Set up TFLint
         uses: terraform-linters/setup-tflint@b480b8fcdaa6f2c577f8e4fa799e89e756bb7c93 # v6.2.2
 
       - name: Terraform Init
-        run: terraform init -backend=false -input=false
+        run: ${{ matrix.iac-tool }} init -backend=false -input=false
 
       - name: Terraform Format Check
-        run: terraform fmt -check -recursive
+        run: ${{ matrix.iac-tool }} fmt -check -recursive
 
       - name: Terraform Validate
-        run: terraform validate
+        run: ${{ matrix.iac-tool }} validate
 
       - name: Initialize TFLint plugins
         run: tflint --init
