@@ -1,0 +1,114 @@
+name: OPSd public infrastructure plan
+
+on:
+  workflow_call:
+    inputs:
+      compatibility-file:
+        description: Path to the CLI compatibility and scenario matrix file.
+        required: false
+        type: string
+        default: ci/public-compatibility.yaml
+      terraform-version:
+        description: Terraform version to use for the plan.
+        required: false
+        type: string
+        default: 1.15.7
+      opentofu-version:
+        description: OpenTofu version to use for the plan.
+        required: false
+        type: string
+        default: 1.12.6
+
+permissions:
+  contents: read
+
+jobs:
+  matrix:
+    name: Generate compatibility matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Check out CLI
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30af803 # v6
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@51c0d5922252eab2cb7349f2142160df023fb656 # v1.95.0
+        with:
+          ruby-version: .ruby-version
+          bundler: none
+
+      - name: Build matrix
+        id: matrix
+        env:
+          COMPATIBILITY_FILE: ${{ inputs.compatibility-file }}
+        run: |
+          ruby -rjson -ryaml <<'RUBY' >> "${GITHUB_OUTPUT}"
+          config = YAML.load_file(ENV.fetch("COMPATIBILITY_FILE"))
+          provider = config.fetch("provider")
+          module_refs = config.fetch("modules").fetch(provider).fetch("refs")
+          cli_refs = config.fetch("cli_refs", ["current"]).map do |ref|
+            ref == "current" ? ENV.fetch("GITHUB_SHA") : ref
+          end
+          scenarios = config.fetch("scenarios")
+          tools = config.fetch("iac_tools", %w[terraform tofu])
+
+          entries = cli_refs.flat_map do |cli_ref|
+            module_refs.flat_map do |modules_ref|
+              scenarios.flat_map do |scenario|
+                tools.map do |iac_tool|
+                  {
+                    "cli_ref" => cli_ref,
+                    "modules_ref" => modules_ref,
+                    "scenario" => scenario.fetch("id"),
+                    "iac_tool" => iac_tool
+                  }
+                end
+              end
+            end
+          end
+
+          abort "Compatibility matrix is empty" if entries.empty?
+          puts "matrix=#{JSON.generate({"include" => entries})}"
+          RUBY
+
+  plan:
+    name: ${{ matrix.scenario }} / ${{ matrix.iac_tool }}
+    needs: matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.matrix.outputs.matrix) }}
+    steps:
+      - name: Check out CLI
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30af803 # v6
+        with:
+          ref: ${{ matrix.cli_ref }}
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@51c0d5922252eab2cb7349f2142160df023fb656 # v1.95.0
+        with:
+          ruby-version: .ruby-version
+          bundler: none
+
+      - name: Set up Terraform
+        if: matrix.iac_tool == 'terraform'
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ inputs.terraform-version }}
+
+      - name: Set up OpenTofu
+        if: matrix.iac_tool == 'tofu'
+        uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2
+        with:
+          tofu_version: ${{ inputs.opentofu-version }}
+
+      - name: Run CLI scenario
+        env:
+          OPSD_PUBLIC_SCENARIO: ${{ matrix.scenario }}
+          OPSD_PUBLIC_MODULES_REF: ${{ matrix.modules_ref }}
+          OPSD_PUBLIC_IAC_TOOL: ${{ matrix.iac_tool }}
+          OPSD_PUBLIC_COMPATIBILITY_FILE: ${{ inputs.compatibility-file }}
+        run: ruby scripts/ci/run_public_scenario.rb
