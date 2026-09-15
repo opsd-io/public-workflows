@@ -101,28 +101,26 @@ jobs:
         uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
         with:
           ref: ${{ inputs.checkout-ref || github.ref }}
-      - name: Verify runner Ruby
+      - name: Set up Ruby with rbenv
         shell: bash
-        env:
-          OPSD_MACOS_RUBY_BIN: ${{ vars.OPSD_MACOS_RUBY_BIN }}
         run: |
-          test -n "${OPSD_MACOS_RUBY_BIN}" || {
-            echo "OPSD_MACOS_RUBY_BIN repository or organization variable is required" >&2
+          export RBENV_ROOT="${RBENV_ROOT:-${HOME}/.rbenv}"
+          export PATH="${RBENV_ROOT}/bin:${PATH}"
+          command -v rbenv >/dev/null || {
+            echo "rbenv is required on the macOS self-hosted runner" >&2
             exit 1
           }
-          test -x "${OPSD_MACOS_RUBY_BIN}" || {
-            echo "Ruby executable does not exist: ${OPSD_MACOS_RUBY_BIN}" >&2
-            exit 1
-          }
-          test "$(${OPSD_MACOS_RUBY_BIN} --disable-gems -e 'print RUBY_VERSION')" = "$(tr -d '[:space:]' < .ruby-version)"
+          eval "$(rbenv init - bash)"
+          ruby_version="$(tr -d '[:space:]' < .ruby-version)"
+          rbenv install -s "${ruby_version}"
+          rbenv shell "${ruby_version}"
+          ruby_bin="$(rbenv which ruby)"
+          test "$(${ruby_bin} --disable-gems -e 'print RUBY_VERSION')" = "${ruby_version}"
+          echo "OPSD_RUBY_BIN=${ruby_bin}" >> "${GITHUB_ENV}"
       - name: Run unit tests
-        env:
-          OPSD_MACOS_RUBY_BIN: ${{ vars.OPSD_MACOS_RUBY_BIN }}
         run: |
-          RUBY_BIN="${OPSD_MACOS_RUBY_BIN}" "${OPSD_MACOS_RUBY_BIN}" -Ilib:test -e 'Dir["test/*_test.rb"].sort.each { |f| load f }'
+          RUBY_BIN="${OPSD_RUBY_BIN}" "${OPSD_RUBY_BIN}" -Ilib:test -e 'Dir["test/*_test.rb"].sort.each { |f| load f }'
       - name: Build bundle
-        env:
-          OPSD_RUBY_BIN: ${{ vars.OPSD_MACOS_RUBY_BIN }}
         run: ${{ inputs.build-script }}
       - name: Generate checksum
         shell: bash
