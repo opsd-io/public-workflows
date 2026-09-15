@@ -111,6 +111,9 @@ jobs:
 
           release_branch="$(jq -r '.headBranchName // empty' <<<"${RELEASE_PR}")"
           release_version="$(jq -r '.version // empty' <<<"${RELEASE_PR}")"
+          if [[ -z "${release_version}" ]]; then
+            release_version="$(jq -r '.title // empty' <<<"${RELEASE_PR}" | sed -nE 's/.*release ([0-9]+\.[0-9]+\.[0-9]+).*/\1/p')"
+          fi
 
           if [[ -z "${release_branch}" || -z "${release_version}" ]]; then
             echo "Release Please did not return a release PR branch and version."
