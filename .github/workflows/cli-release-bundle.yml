@@ -51,6 +51,9 @@ jobs:
           ref: ${{ inputs.checkout-ref || github.ref }}
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
+        env:
+          RUNNER_TOOL_CACHE: ${{ runner.temp }}/toolcache
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/toolcache
         with:
           ruby-version: .ruby-version
       - name: Run unit tests
