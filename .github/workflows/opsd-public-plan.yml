@@ -18,6 +18,16 @@ on:
         required: false
         type: string
         default: 1.12.6
+      integration-tests-repository:
+        description: Public repository containing the scenario matrix and runner.
+        required: false
+        type: string
+        default: opsd-io/integration-tests
+      integration-tests-ref:
+        description: Git ref of the integration test suite.
+        required: false
+        type: string
+        default: main
 
 permissions:
   contents: read
@@ -33,6 +43,13 @@ jobs:
       - name: Check out CLI
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
+      - name: Check out integration tests
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          repository: ${{ inputs.integration-tests-repository }}
+          ref: ${{ inputs.integration-tests-ref }}
+          path: integration-tests
+
       - name: Set up Ruby
         uses: ruby/setup-ruby@bec3f19a76460dbe12f60def7d1a77585f07516c # v1.322.0
         with:
@@ -42,9 +59,9 @@ jobs:
       - name: Build matrix
         id: matrix
         env:
-          COMPATIBILITY_FILE: ${{ inputs.compatibility-file }}
+          COMPATIBILITY_FILE: integration-tests/${{ inputs.compatibility-file }}
         run: |
-          ruby scripts/ci/generate_public_matrix.rb >> "${GITHUB_OUTPUT}"
+          ruby integration-tests/scripts/generate_matrix.rb >> "${GITHUB_OUTPUT}"
 
   plan:
     name: ${{ matrix.provider }} / ${{ matrix.scenario }} / ${{ matrix.iac_tool }}
@@ -59,6 +76,13 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ matrix.cli_ref }}
+
+      - name: Check out integration tests
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          repository: ${{ inputs.integration-tests-repository }}
+          ref: ${{ inputs.integration-tests-ref }}
+          path: integration-tests
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@bec3f19a76460dbe12f60def7d1a77585f07516c # v1.322.0
@@ -83,5 +107,6 @@ jobs:
           OPSD_PUBLIC_SCENARIO: ${{ matrix.scenario }}
           OPSD_PUBLIC_MODULES_REF: ${{ matrix.modules_ref }}
           OPSD_PUBLIC_IAC_TOOL: ${{ matrix.iac_tool }}
-          OPSD_PUBLIC_COMPATIBILITY_FILE: ${{ inputs.compatibility-file }}
-        run: ruby scripts/ci/run_public_scenario.rb
+          OPSD_PUBLIC_COMPATIBILITY_FILE: integration-tests/${{ inputs.compatibility-file }}
+          OPSD_CLI_ROOT: ${{ github.workspace }}
+        run: ruby integration-tests/scripts/run_scenario.rb
