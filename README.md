@@ -134,5 +134,6 @@ bundles in parallel. It uploads each bundle and its SHA-256 checksum to the
 GitHub Release for the pushed tag. Both runners select the Ruby version from
 the checked-out repository's `.ruby-version` file.
 
-See [How to contribute](./CONTRIBUTING.md) for workflow conventions, linting,
-security requirements, and validation expectations.
+See the [central OPSd contribution guide](https://github.com/opsd-io/.github/blob/main/CONTRIBUTING.md)
+for workflow conventions, linting, security requirements, and validation
+expectations.
