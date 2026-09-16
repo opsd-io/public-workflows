@@ -107,6 +107,6 @@ jobs:
           OPSD_PUBLIC_SCENARIO: ${{ matrix.scenario }}
           OPSD_PUBLIC_MODULES_REF: ${{ matrix.modules_ref }}
           OPSD_PUBLIC_IAC_TOOL: ${{ matrix.iac_tool }}
-          OPSD_PUBLIC_COMPATIBILITY_FILE: integration-tests/${{ inputs.compatibility-file }}
+          OPSD_PUBLIC_COMPATIBILITY_FILE: ${{ inputs.compatibility-file }}
           OPSD_CLI_ROOT: ${{ github.workspace }}
         run: ruby integration-tests/scripts/run_scenario.rb
