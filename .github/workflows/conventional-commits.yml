@@ -1,0 +1,71 @@
+name: Conventional Commits
+
+on:
+  workflow_call:
+    inputs:
+      allowed-scopes:
+        description: Comma-separated list of scopes allowed for this repository.
+        required: false
+        type: string
+        default: cli,ci,docs,release
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  validate:
+    name: Conventional Commits
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate pull request title and commits
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          ALLOWED_SCOPES: ${{ inputs.allowed-scopes }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          title="$(gh api "repos/${GH_REPO}/pulls/${PR_NUMBER}" --jq '.title')"
+          release_title_regex='^chore\(main\): release [0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$'
+          conventional_regex='^(feat|fix|perf|docs|test|ci|build|chore|refactor|revert|style|deps)\(([a-z0-9][a-z0-9-]*)\)(!)?: .+'
+
+          if [[ "${{ github.actor }}" == "github-actions[bot]" && "${title}" =~ ${release_title_regex} ]]; then
+            echo "Release Please pull request accepted: ${title}"
+            exit 0
+          fi
+
+          if [[ ! "${title}" =~ ${conventional_regex} ]]; then
+            echo "Invalid pull request title: ${title}"
+            echo "Expected: type(scope): description"
+            exit 1
+          fi
+
+          scope="${BASH_REMATCH[2]}"
+          IFS=',' read -r -a allowed_scopes <<< "${ALLOWED_SCOPES}"
+          for allowed_scope in "${allowed_scopes[@]}"; do
+            if [[ "${scope}" == "${allowed_scope}" ]]; then
+              scope_allowed=true
+              break
+            fi
+          done
+
+          if [[ "${scope_allowed:-false}" != true ]]; then
+            echo "Scope '${scope}' is not allowed for ${GH_REPO}."
+            echo "Allowed scopes: ${ALLOWED_SCOPES}"
+            exit 1
+          fi
+
+          echo "Valid pull request title: ${title}"
+
+          while IFS= read -r commit_message; do
+            commit_title="${commit_message%%$'\n'*}"
+            [[ -z "${commit_title}" ]] && continue
+            if [[ ! "${commit_title}" =~ ${conventional_regex} ]]; then
+              echo "Invalid commit title: ${commit_title}"
+              echo "Expected: type(scope): description"
+              exit 1
+            fi
+          done < <(gh api --paginate "repos/${GH_REPO}/pulls/${PR_NUMBER}/commits" --jq '.[].commit.message')
