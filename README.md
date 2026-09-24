@@ -108,6 +108,21 @@ with:
 Release Please will update that file in the release PR so the source version,
 tag, changelog, and generated artifacts remain aligned.
 
+### Merge policy
+
+Repositories using this workflow must use squash merging for pull requests
+targeting the release branch. Regular merge commits and rebase merges must be
+disabled by the repository branch protection or ruleset configuration.
+
+This is required because Release Please builds release notes from Conventional
+Commits. A regular merge commit can contain both the pull request title and the
+original commit message, causing the same change to appear twice in the
+generated changelog. Squash merging produces one canonical release commit and
+one changelog entry per pull request.
+
+The OPSd repository rulesets are managed centrally and should set the allowed
+pull request merge methods to `squash` for repositories using Release Please.
+
 ## CLI release bundles
 
 Use the reusable CLI release workflow from a repository workflow triggered by a
