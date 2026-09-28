@@ -28,7 +28,7 @@ env:
 jobs:
   checks:
     name: ${{ matrix.iac-tool }} checks
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 15
 
     strategy:
