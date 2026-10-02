@@ -28,6 +28,11 @@ on:
         required: false
         type: string
         default: ''
+      last-release-sha:
+        description: Commit to use as the changelog baseline for a one-time release reset.
+        required: false
+        type: string
+        default: ''
       config-file:
         description: Path to the repository-specific Release Please configuration.
         required: false
@@ -82,6 +87,7 @@ jobs:
             "component": "${{ inputs.component }}",
             "initial-version": "${{ inputs.initial-version }}",
             "release-as": "${{ inputs.release-as }}",
+            "last-release-sha": "${{ inputs.last-release-sha }}",
             "exclude-paths": [
               ".github/workflows"
             ],
