@@ -18,6 +18,16 @@ on:
         required: false
         type: string
         default: 1.12.6
+      helm-version:
+        description: Helm version for combined platform qualification.
+        required: false
+        type: string
+        default: 4.3.0
+      kubeconform-version:
+        description: Kubeconform version for combined platform qualification.
+        required: false
+        type: string
+        default: 0.7.0
       integration-tests-repository:
         description: Public repository containing the scenario matrix and runner.
         required: false
@@ -91,22 +101,35 @@ jobs:
           bundler: none
 
       - name: Set up Terraform
-        if: matrix.iac_tool == 'terraform'
+        if: matrix.iac_tool == 'terraform' || matrix.platform_validation
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: ${{ inputs.terraform-version }}
 
       - name: Set up OpenTofu
-        if: matrix.iac_tool == 'tofu'
+        if: matrix.iac_tool == 'tofu' || matrix.platform_validation
         uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2
         with:
           tofu_version: ${{ inputs.opentofu-version }}
+
+      - name: Set up Helm
+        if: matrix.platform_validation
+        uses: Azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v${{ inputs.helm-version }}
+
+      - name: Set up Kubeconform
+        if: matrix.platform_validation
+        uses: bmuschko/setup-kubeconform@e5d264ec1eafe2314e750c429a9da7639dd5a003 # v1
+        with:
+          kubeconform-version: ${{ inputs.kubeconform-version }}
 
       - name: Run CLI scenario
         env:
           OPSD_PUBLIC_SCENARIO: ${{ matrix.scenario }}
           OPSD_PUBLIC_MODULES_REF: ${{ matrix.modules_ref }}
           OPSD_PUBLIC_IAC_TOOL: ${{ matrix.iac_tool }}
+          OPSD_PUBLIC_KUBERNETES_MODULES_REF: ${{ matrix.kubernetes_modules_ref }}
           OPSD_PUBLIC_COMPATIBILITY_FILE: ${{ inputs.compatibility-file }}
           OPSD_CLI_ROOT: ${{ github.workspace }}
         run: ruby integration-tests/scripts/run_scenario.rb
